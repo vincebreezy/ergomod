@@ -55,7 +55,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern PCD_HandleTypeDef hpcd_USB_FS;
+extern DMA_HandleTypeDef hdma_adc1;
+extern SMBUS_HandleTypeDef hsmbus1;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -197,6 +199,76 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32wbxx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles DMA1 channel1 global interrupt.
+  */
+void DMA1_Channel1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc1);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB low priority interrupt, USB wake-up interrupt through EXTI line 28.
+  */
+void USB_LP_IRQHandler(void)
+{
+  /* USER CODE BEGIN USB_LP_IRQn 0 */
+
+  /* USER CODE END USB_LP_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_FS);
+  /* USER CODE BEGIN USB_LP_IRQn 1 */
+
+  /* USER CODE END USB_LP_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C1 event interrupt.
+  */
+void I2C1_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C1_EV_IRQn 0 */
+
+  /* USER CODE END I2C1_EV_IRQn 0 */
+  HAL_SMBUS_EV_IRQHandler(&hsmbus1);
+  /* USER CODE BEGIN I2C1_EV_IRQn 1 */
+
+  /* USER CODE END I2C1_EV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C1 error interrupt.
+  */
+void I2C1_ER_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C1_ER_IRQn 0 */
+
+  /* USER CODE END I2C1_ER_IRQn 0 */
+  HAL_SMBUS_ER_IRQHandler(&hsmbus1);
+  /* USER CODE BEGIN I2C1_ER_IRQn 1 */
+
+  /* USER CODE END I2C1_ER_IRQn 1 */
+}
+
+/**
+  * @brief This function handles HSEM global interrupt.
+  */
+void HSEM_IRQHandler(void)
+{
+  /* USER CODE BEGIN HSEM_IRQn 0 */
+
+  /* USER CODE END HSEM_IRQn 0 */
+  HAL_HSEM_IRQHandler();
+  /* USER CODE BEGIN HSEM_IRQn 1 */
+
+  /* USER CODE END HSEM_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 
