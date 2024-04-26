@@ -43,12 +43,15 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
+UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 uint32_t previousMillis = 0;
 uint32_t currentMillis = 0;
-uint32_t counterOutside = 0; //For testing only
-uint32_t counterInside = 0; //For testing only
+uint32_t counterOutside = 0; //For testing only (button feedback)
+uint32_t counterInside = 0; //For testing only (button feedback)
+
+uint8_t rxData; // bluetooth data
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,13 +60,14 @@ void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t VR[2];	// store 12 bit ADC values
+uint32_t VR[2];	// store 12 bit ADC values for joystick
 /* USER CODE END 0 */
 
 /**
@@ -100,9 +104,11 @@ int main(void)
   MX_DMA_Init();
   MX_USB_Device_Init();
   MX_ADC1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_ADC_Start_DMA(&hadc1, VR, 2); // start ADC in DMA mode for multi-channel
+  HAL_UART_Receive_IT(&huart1,&rxData,1); // Enabling interrupt receive
+  HAL_ADC_Start_DMA(&hadc1, VR, 2); // start ADC in DMA mode for multichannel
 
   /* USER CODE END 2 */
 
@@ -114,6 +120,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+	// joystick movement
 	if ((VR[0] >= 2000) && (VR[0] <= 3000)) {	// xmin and xplus off
 		HAL_GPIO_WritePin(xmin_GPIO_Port, xmin_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(xplus_GPIO_Port, xplus_Pin, GPIO_PIN_RESET);
@@ -297,6 +304,54 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 9600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -327,6 +382,7 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, xmin_Pin|xplus_Pin|ymin_Pin|yplus_Pin, GPIO_PIN_RESET);
@@ -338,6 +394,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PB1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
 }
@@ -345,13 +411,30 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  counterOutside++; //For testing only
+  counterOutside++; //For testing only (button feedback)
   currentMillis = HAL_GetTick();
   if (GPIO_Pin == GPIO_PIN_1 && (currentMillis - previousMillis > 10))
   {
-    counterInside++; //For testing only
+    counterInside++; //For testing only (button feedback)
     HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
     previousMillis = currentMillis;
+  }
+}
+
+// for debugging bluetooth with an app (N for off, Y for on) with LED
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance==USART1)
+  {
+    if(rxData==78) // Ascii value of 'N' is 78 (N for NO)
+    {
+    	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 0);
+    }
+    else if (rxData==89) // Ascii value of 'Y' is 89 (Y for YES)
+    {
+    	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 1);
+    }
+    HAL_UART_Receive_IT(&huart1,&rxData,1); // Enabling interrupt receive again
   }
 }
 /* USER CODE END 4 */
