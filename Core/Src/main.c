@@ -45,7 +45,10 @@ ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
 /* USER CODE BEGIN PV */
-
+uint32_t previousMillis = 0;
+uint32_t currentMillis = 0;
+uint32_t counterOutside = 0; //For testing only
+uint32_t counterInside = 0; //For testing only
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -340,7 +343,17 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  counterOutside++; //For testing only
+  currentMillis = HAL_GetTick();
+  if (GPIO_Pin == GPIO_PIN_1 && (currentMillis - previousMillis > 10))
+  {
+    counterInside++; //For testing only
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+    previousMillis = currentMillis;
+  }
+}
 /* USER CODE END 4 */
 
 /**
